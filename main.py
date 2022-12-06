@@ -133,5 +133,23 @@ def day_05() -> None:
     print(f"Day 05, Part 2: {crate_mover_9001()}")
 
 
+@register
+def day_06() -> None:
+    """Day 06."""
+    with open(INPUT_FOLDER / "06.txt", encoding="utf-8") as file_obj:
+        code = file_obj.readline()
+
+    def day_06_helper(repeat_len: int) -> int:
+        for end in range(repeat_len, len(code) + 1):
+            if len(set(code[end - repeat_len : end])) == repeat_len:
+                break
+        else:
+            raise ValueError
+        return end
+
+    print(f"Day 06, Part 1: {day_06_helper(4)}")
+    print(f"Day 06, Part 2: {day_06_helper(14)}")
+
+
 if __name__ == "__main__":
     run_all()
