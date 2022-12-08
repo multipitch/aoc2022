@@ -151,5 +151,77 @@ def day_06() -> None:
     print(f"Day 06, Part 2: {day_06_helper(14)}")
 
 
+@register
+def day_07() -> None:
+    """Day 07."""
+    with open(INPUT_FOLDER / "07.txt", encoding="utf-8") as file_obj:
+        lines = file_obj.read().splitlines()
+
+    threshold = 100000
+    total_space = 70000000
+    required_space = 30000000
+
+    class Directory:
+        """
+        A directory.
+        Could probably use a bunch of dicts instead of classes, but
+        this makes more sense to read.
+        """
+
+        def __init__(self, name: str, parent: Directory | None = None):
+            self.name = name
+            self.parent = parent
+            self.subdirectories: dict[str, Directory] = {}
+            self.files: dict[str, int] = {}
+            self.size = 0
+
+    root = Directory(name="/")
+    all_directories: set[Directory] = set()
+    location = root
+
+    # This approach assumes that the user creating the data traversed
+    # directories in a depth-first search, allowing us to compute the
+    # total directory sizes on "$ cd .." operations.
+    # Otherwise, would have to keep lists of seen files or re-traverse a
+    # second time to totalize sizes.
+    for line in lines:
+        match line.split():
+            case ["$", "cd", "/"]:
+                location = root
+            case ["$", "cd", ".."]:
+                if location.parent:
+                    location.parent.size += location.size
+                    location = location.parent
+                else:
+                    raise ValueError
+            case ["$", "cd", subdirectory]:
+                location = location.subdirectories[subdirectory]
+            case ["$", "ls"]:
+                continue
+            case [size, filename] if size.isnumeric():
+                location.files[filename] = int(size)
+                location.size += int(size)
+            case [type_, subdir_name] if type_ == "dir":
+                subdir_obj = Directory(name=subdir_name, parent=location)
+                all_directories.add(subdir_obj)
+                location.subdirectories[subdir_name] = subdir_obj
+            case _:
+                raise ValueError
+
+    # The data doesn't cd back to root at the end; we need to do this to
+    # correctly compute totals for all directories back up to root.
+    while location != root:
+        if location.parent:
+            location.parent.size += location.size
+            location = location.parent
+
+    total = sum([dir.size for dir in all_directories if dir.size <= threshold])
+    print(f"Day 07, Part 1: {total}")
+
+    min_del = max(0, required_space - (total_space - root.size))
+    del_size = min(dir.size for dir in all_directories if dir.size >= min_del)
+    print(f"Day 07, Part 2: {del_size}")
+
+
 if __name__ == "__main__":
     run_all()
