@@ -9,3 +9,24 @@ line_length = 79
 [tool.mypy]
 strict = true
 show_error_codes = true
+
+[tool.pylint.main]
+good-names = [
+    "i",
+    "j",
+    "k",
+    "ex",
+    "Run",
+    "_",
+    "w",
+    "x",
+    "y",
+    "z",
+    "a",
+    "b",
+    "c",
+    "dw",
+    "dy",
+    "dy",
+    "dx",
+]
