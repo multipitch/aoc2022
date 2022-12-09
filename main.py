@@ -5,15 +5,23 @@ Advent of Code 2022
 """
 
 from __future__ import annotations
-from pathlib import Path
+
 import heapq
-import re
 import math
+import re
 from collections import defaultdict
 from copy import deepcopy
+from pathlib import Path
 from typing import Any, Callable
 
-from data import DAY_02_SCORES_1, DAY_02_SCORES_2, DAY_03_SCORES
+from data import (
+    DAY_02_SCORES_1,
+    DAY_02_SCORES_2,
+    DAY_03_SCORES,
+    DAY_09_HEAD_MOVES,
+    DAY_09_MOVES,
+    DAY_09_TAIL_MOVES,
+)
 
 ALL_PROBLEMS = []
 INPUT_FOLDER = Path("inputs")
@@ -30,9 +38,8 @@ def run_problem(func: Callable[[str], tuple[Any, Any]]) -> None:
     day = str(func.__doc__)[4:6]
     with open(INPUT_FOLDER / f"{day}.txt", encoding="utf-8") as file_obj:
         raw_string = file_obj.read()
-    results = func(raw_string)
-    for i in (0, 1):
-        print(f"Day {day}, Part {i}: {results[i]}")
+    for i, result in enumerate(func(raw_string)):
+        print(f"Day {day}, Part {i + 1}: {result}")
 
 
 def run_all() -> None:
@@ -247,6 +254,25 @@ def day_08(data: str) -> tuple[int, int]:
     qty_visible = sum([is_visible(*location) for location in heights])
     max_score = max(score(*location) for location in heights)
     return qty_visible, max_score
+
+
+@register
+def day_09_part_1(data: str) -> tuple[int]:
+    """Day 09."""
+    head = [0, 0]
+    rel_tail = (0, 0)
+    tail_pos = (0, 0)
+    seen = set()
+
+    for direction, distance in [line.split() for line in data.splitlines()]:
+        for _ in range(int(distance)):
+            head[0] += DAY_09_HEAD_MOVES[direction][0]
+            head[1] += DAY_09_HEAD_MOVES[direction][1]
+            rel_tail = DAY_09_TAIL_MOVES[rel_tail, direction]
+            tail_pos = (head[0] + rel_tail[0], head[1] + rel_tail[1])
+            seen.add(tail_pos)
+
+    return (len(seen),)
 
 
 if __name__ == "__main__":
