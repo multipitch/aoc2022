@@ -281,21 +281,32 @@ def day_09(data: str) -> tuple[int, int]:
 
 
 @register
-def day_10(data: str) -> tuple[int, int]:
+def day_10(data: str) -> tuple[int, str]:
     """Day 10."""
 
-    cycle = value = 1
-    strength_sum = 0
+    cycle = 1
     cycles_of_interest = [20, 60, 100, 140, 180, 220]
+    sprite_centers = [1]
+    width = 40
+    height = 6
+    pixels = [[" "] * width for _ in range(height)]
+
     for line in data.splitlines():
-        strength_sum += cycle * value if cycle in cycles_of_interest else 0
+        sprite_centers.append(sprite_centers[-1])
         cycle += 1
         if line[:4] == "addx":
-            strength_sum += cycle * value if cycle in cycles_of_interest else 0
             cycle += 1
-            value += int(line[5:])
+            sprite_centers.append(sprite_centers[-1] + int(line[5:]))
 
-    return strength_sum, 0
+    strength = sum([i * sprite_centers[i - 1] for i in cycles_of_interest])
+
+    for cycle, sprite_center in enumerate(sprite_centers, start=1):
+        pixel_x = (cycle - 1) % width
+        if abs(sprite_center - pixel_x) <= 1:
+            pixels[(cycle - 1) // width % height][pixel_x] = "#"
+    screen = "\n".join("".join(row) for row in pixels)
+
+    return strength, "...\n" + screen
 
 
 if __name__ == "__main__":
