@@ -18,9 +18,7 @@ from data import (
     DAY_02_SCORES_1,
     DAY_02_SCORES_2,
     DAY_03_SCORES,
-    DAY_09_HEAD_MOVES,
     DAY_09_MOVES,
-    DAY_09_TAIL_MOVES,
 )
 
 ALL_PROBLEMS = []
@@ -59,10 +57,9 @@ def day_01(data: str) -> tuple[int, int]:
 def day_02(data: str) -> tuple[int, int]:
     """Day 02."""
     plays = data.splitlines()
-    return (
-        sum(DAY_02_SCORES_1[play] for play in plays),
-        sum(DAY_02_SCORES_2[play] for play in plays),
-    )
+    part_1 = sum(DAY_02_SCORES_1[play] for play in plays)
+    part_2 = sum(DAY_02_SCORES_2[play] for play in plays)
+    return part_1, part_2
 
 
 @register
@@ -257,23 +254,32 @@ def day_08(data: str) -> tuple[int, int]:
 
 
 @register
-def day_09_part_1(data: str) -> tuple[int]:
+def day_09_part_1(data: str) -> tuple[int, int]:
     """Day 09."""
-    head = [0, 0]
-    rel_tail = (0, 0)
-    tail_pos = (0, 0)
-    seen = set()
 
-    for direction, distance in [line.split() for line in data.splitlines()]:
-        for _ in range(int(distance)):
-            head[0] += DAY_09_HEAD_MOVES[direction][0]
-            head[1] += DAY_09_HEAD_MOVES[direction][1]
-            rel_tail = DAY_09_TAIL_MOVES[rel_tail, direction]
-            tail_pos = (head[0] + rel_tail[0], head[1] + rel_tail[1])
-            seen.add(tail_pos)
+    directions = {"R": (1, 0), "L": (-1, 0), "D": (0, -1), "U": (0, 1)}
 
-    return (len(seen),)
+    def day_09_inner(length: int) -> int:
+        knots_x = [0] * length
+        knots_y = [0] * length
+        seen = set()
+        for direc, distance in [line.split() for line in data.splitlines()]:
+            head_dx, head_dy = directions[direc]
+            for _ in range(int(distance)):
+                knots_x[0] += head_dx
+                knots_y[0] += head_dy
+                for i in range(1, length):
+                    dx = knots_x[i] - knots_x[i - 1]
+                    dy = knots_y[i] - knots_y[i - 1]
+                    (dx, dy) = DAY_09_MOVES[dx, dy]
+                    knots_x[i] += dx
+                    knots_y[i] += dy
+                seen.add((knots_x[-1], knots_y[-1]))
+        return len(seen)
+
+    return (day_09_inner(2), day_09_inner(10))
 
 
 if __name__ == "__main__":
+
     run_all()
