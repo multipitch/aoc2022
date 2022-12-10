@@ -254,7 +254,7 @@ def day_08(data: str) -> tuple[int, int]:
 
 
 @register
-def day_09_part_1(data: str) -> tuple[int, int]:
+def day_09(data: str) -> tuple[int, int]:
     """Day 09."""
 
     directions = {"R": (1, 0), "L": (-1, 0), "D": (0, -1), "U": (0, 1)}
@@ -278,6 +278,24 @@ def day_09_part_1(data: str) -> tuple[int, int]:
         return len(seen)
 
     return (day_09_inner(2), day_09_inner(10))
+
+
+@register
+def day_10(data: str) -> tuple[int, int]:
+    """Day 10."""
+
+    cycle = value = 1
+    strength_sum = 0
+    cycles_of_interest = [20, 60, 100, 140, 180, 220]
+    for line in data.splitlines():
+        strength_sum += cycle * value if cycle in cycles_of_interest else 0
+        cycle += 1
+        if line[:4] == "addx":
+            strength_sum += cycle * value if cycle in cycles_of_interest else 0
+            cycle += 1
+            value += int(line[5:])
+
+    return strength_sum, 0
 
 
 if __name__ == "__main__":
