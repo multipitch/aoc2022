@@ -9,20 +9,17 @@ from __future__ import annotations
 import heapq
 import math
 import re
-from collections import defaultdict
+from collections import defaultdict, deque
 from copy import deepcopy
+from operator import add, mul
 from pathlib import Path
 from typing import Any, Callable
 
-from data import (
-    DAY_02_SCORES_1,
-    DAY_02_SCORES_2,
-    DAY_03_SCORES,
-    DAY_09_MOVES,
-)
+from advent_of_code_ocr import convert_array_6 as ocr
+
+from data import DAY_02_SCORES_1, DAY_02_SCORES_2, DAY_03_SCORES, DAY_09_MOVES
 
 ALL_PROBLEMS = []
-INPUT_FOLDER = Path("inputs")
 
 
 def register(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -34,7 +31,7 @@ def register(func: Callable[..., Any]) -> Callable[..., Any]:
 def run_problem(func: Callable[[str], tuple[Any, Any]]) -> None:
     """Run a problem on a downloaded dataset."""
     day = str(func.__doc__)[4:6]
-    with open(INPUT_FOLDER / f"{day}.txt", encoding="utf-8") as file_obj:
+    with open(Path("inputs") / f"{day}.txt", encoding="utf-8") as file_obj:
         raw_string = file_obj.read()
     for i, result in enumerate(func(raw_string)):
         print(f"Day {day}, Part {i + 1}: {result}")
@@ -175,22 +172,22 @@ def day_07(data: str) -> tuple[int, int]:
 
     for line in data.splitlines():
         match line.split():
-            case ["$", "cd", "/"]:
+            case "$", "cd", "/":
                 location = root
-            case ["$", "cd", ".."]:
+            case "$", "cd", "..":
                 if location.parent:
                     location.parent.size += location.size
                     location = location.parent
                 else:
                     raise ValueError
-            case ["$", "cd", subdirectory]:
+            case "$", "cd", subdirectory:
                 location = location.subdirectories[subdirectory]
-            case ["$", "ls"]:
+            case "$", "ls":
                 continue
-            case [size, filename] if size.isnumeric():
+            case size, filename if size.isnumeric():
                 location.files[filename] = int(size)
                 location.size += int(size)
-            case [type_, subdir_name] if type_ == "dir":
+            case type_, subdir_name if type_ == "dir":
                 subdir_obj = Directory(name=subdir_name, parent=location)
                 all_directories.add(subdir_obj)
                 location.subdirectories[subdir_name] = subdir_obj
@@ -289,7 +286,7 @@ def day_10(data: str) -> tuple[int, str]:
     sprite_centers = [1]
     width = 40
     height = 6
-    pixels = [[" "] * width for _ in range(height)]
+    pixels = [["."] * width for _ in range(height)]
 
     for line in data.splitlines():
         sprite_centers.append(sprite_centers[-1])
@@ -304,11 +301,52 @@ def day_10(data: str) -> tuple[int, str]:
         pixel_x = (cycle - 1) % width
         if abs(sprite_center - pixel_x) <= 1:
             pixels[(cycle - 1) // width % height][pixel_x] = "#"
-    screen = "\n".join("".join(row) for row in pixels)
 
-    return strength, "...\n" + screen
+    return strength, ocr(pixels, fill_pixel="#", empty_pixel=".")
+
+
+@register
+def day_11(data: str) -> tuple[int, int]:
+    """Day 11."""
+
+    def day_11_inner(rounds: int, divisor: int) -> int:
+        items = []
+        ops = []
+        args = []
+        tests = []
+        dests: list[list[int]] = [[], []]
+
+        for row in data.splitlines():
+            match row.split():
+                case "Starting", _, *_items:
+                    __items = deque(int(item.strip(",")) for item in _items)
+                    items.append(__items)
+                case "Operation:", _, _, _, operator, arg:
+                    ops.append(mul if operator == "*" else add)
+                    args.append(None if arg == "old" else int(arg))
+                case "Test:", _, _, test_divisor:
+                    tests.append(int(test_divisor))
+                case "If", "true:", _, _, _, destination:
+                    dests[0].append(int(destination))
+                case "If", "false:", _, _, _, destination:
+                    dests[1].append(int(destination))
+
+        inspected = [0 for _ in items]
+        lcm = math.lcm(*tests)
+
+        for _ in range(rounds):
+            for i, monkey_items in enumerate(items):
+                while monkey_items:
+                    item = monkey_items.popleft()
+                    inspected[i] += 1
+                    other = item if args[i] is None else args[i]
+                    item = ops[i](item, other) % lcm // divisor
+                    items[dests[item % tests[i] != 0][i]].append(item)
+
+        return math.prod(sorted(inspected)[-2:])
+
+    return day_11_inner(20, 3), day_11_inner(10000, 1)
 
 
 if __name__ == "__main__":
-
     run_all()
