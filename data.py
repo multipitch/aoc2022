@@ -15,7 +15,6 @@ DAY_02_SCORES_1 = {
     "C Y": 2,
     "C Z": 6,
 }
-
 DAY_02_SCORES_2 = {
     "A X": 3,
     "A Y": 4,

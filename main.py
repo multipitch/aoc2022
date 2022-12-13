@@ -7,6 +7,7 @@ Advent of Code 2022
 from __future__ import annotations
 
 import heapq
+import itertools
 import math
 import re
 from collections import defaultdict, deque
@@ -33,8 +34,9 @@ def run_problem(func: Callable[[str], tuple[Any, Any]]) -> None:
     day = str(func.__doc__)[4:6]
     with open(Path("inputs") / f"{day}.txt", encoding="utf-8") as file_obj:
         raw_string = file_obj.read()
-    for i, result in enumerate(func(raw_string)):
-        print(f"Day {day}, Part {i + 1}: {result}")
+    part_1, part_2 = func(raw_string)
+    print(f"Day {day}: Part 1 = {part_1}")
+    print(f"        Part 2 = {part_2}")
 
 
 def run_all() -> None:
@@ -63,10 +65,7 @@ def day_02(data: str) -> tuple[int, int]:
 def day_03(data: str) -> tuple[int, int]:
     """Day 03."""
     lines = data.splitlines()
-    common_1 = [
-        set(line[: len(line) // 2]).intersection(set(line[len(line) // 2 :]))
-        for line in lines
-    ]
+    common_1 = [set(i[: len(i) // 2]) & set(i[len(i) // 2 :]) for i in lines]
     score_1 = sum(DAY_03_SCORES[letter] for s in common_1 for letter in s)
     qty = 3
     common_2 = [
@@ -346,6 +345,108 @@ def day_11(data: str) -> tuple[int, int]:
         return math.prod(sorted(inspected)[-2:])
 
     return day_11_inner(20, 3), day_11_inner(10000, 1)
+
+
+# @register # TODO: This works, but is very slow for Part 2.
+def day_12(data: str) -> tuple[int, int]:
+    """Day 12."""
+
+    nodes = {}
+    start = (-1, -1)
+    starts = []
+    end = (-1, -1)
+    for y, row in enumerate(data.splitlines()):
+        for x, height in enumerate(row):
+            if height == "S":
+                start = (x, y)
+                height = "a"
+            elif height == "E":
+                end = (x, y)
+                height = "z"
+            elif height == "a":
+                starts.append((x, y))
+            nodes[x, y] = ord(height) - 97
+
+    edges = set()
+    for (x, y) in nodes:
+        for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            dest = (x + dx, y + dy)
+            if dest in nodes and nodes[dest] - nodes[x, y] <= 1:
+                edges.add(((x, y), dest))
+
+    class Removed:
+        """A removed task."""
+
+    removed = Removed()
+
+    def run(start: tuple[int, int]) -> int:
+        """Find shortes path between start and destination."""
+        queue: list[tuple[int, int, tuple[int, int] | Removed]] = []
+        entry_finder: dict[
+            tuple[int, int] | Removed,
+            tuple[int, int, tuple[int, int] | Removed],
+        ] = {}
+        counter = itertools.count()
+
+        def add_task(task: tuple[int, int], priority: int = 0) -> None:
+            """Add a new task or update the priority of an existing task."""
+            if task in entry_finder:
+                entry = entry_finder.pop(task)
+                entry = (entry[0], entry[1], removed)
+
+            count = next(counter)
+            entry = (priority, count, task)
+            entry_finder[task] = entry
+            heapq.heappush(queue, entry)
+
+        def pop_task() -> tuple[int, int]:
+            """Remove and return the lowest priority task."""
+            while queue:
+                _, _, task = heapq.heappop(queue)
+                if not isinstance(task, Removed):
+                    del entry_finder[task]
+                    return task
+            raise KeyError("pop from an empty priority queue")
+
+        permanent_set: set[tuple[int, int]] = {start}
+        distances: dict[tuple[int, int], int] = {}
+        predecessors = {}
+        spst = set()
+
+        for node in nodes:
+            if node == start:
+                distances[node] = 0
+            else:
+                if (start, node) in edges:
+                    distances[node] = 1
+                else:
+                    distances[node] = 1000000000
+                predecessors[node] = start
+                add_task(node, distances[node])
+
+        while queue:
+            try:
+                source = pop_task()
+            except KeyError:
+                break  # not sure why last one is throwing error
+
+            if source in permanent_set:
+                continue
+
+            permanent_set.add(source)
+            spst.add((predecessors[source], source))
+
+            for _, _, dest_ in queue:
+                if isinstance(dest_, Removed) or dest_ in permanent_set:
+                    continue
+                if (source, dest_) in edges:
+                    if distances[dest_] > distances[source] + 1:
+                        distances[dest_] = distances[source] + 1
+                        predecessors[dest_] = source
+                        add_task(dest_, distances[dest_])
+        return distances[end]
+
+    return run(start), min(run(s) for s in starts)
 
 
 if __name__ == "__main__":
