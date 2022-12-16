@@ -10,8 +10,10 @@ import heapq
 import itertools
 import math
 import re
+from ast import literal_eval
 from collections import defaultdict, deque
 from copy import deepcopy
+from dataclasses import dataclass
 from operator import add, mul
 from pathlib import Path
 from typing import Any, Callable
@@ -347,7 +349,10 @@ def day_11(data: str) -> tuple[int, int]:
     return day_11_inner(20, 3), day_11_inner(10000, 1)
 
 
-# @register # TODO: This works, but is very slow for Part 2.
+# @register
+# TODO: This works, but is very slow for Part 2.
+#       Problem name mentions hill climb; probably a simpler approach
+#       available.
 def day_12(data: str) -> tuple[int, int]:
     """Day 12."""
 
@@ -447,6 +452,70 @@ def day_12(data: str) -> tuple[int, int]:
         return distances[end]
 
     return run(start), min(run(s) for s in starts)
+
+
+@register
+def day_13(data: str) -> tuple[int, int]:
+    """Day 13."""
+
+    rows = data.splitlines()
+    pairs: list[tuple[list[Any] | int, list[Any] | int]] = [
+        (literal_eval(rows[3 * i]), literal_eval(rows[3 * i + 1]))
+        for i in range(1 + len(rows) // 3)
+    ]
+
+    def compare_le(a: list[Any] | int, b: list[Any] | int) -> str:
+        if isinstance(a, int) and isinstance(b, int):
+            if a == b:
+                return "eq"
+            if a < b:
+                return "lt"
+            return "gt"
+        if isinstance(a, list) and isinstance(b, list):
+            for i, j in zip(a, b):
+                if isinstance(i, int) and isinstance(j, list):
+                    i = [i]
+                if isinstance(i, list) and isinstance(j, int):
+                    j = [j]
+                    comp = compare_le(i, j)
+                    if comp != "eq":
+                        return comp
+                comp = compare_le(i, j)
+                if comp != "eq":
+                    return comp
+            if len(a) == len(b):
+                return "eq"
+            if len(a) < len(b):
+                return "lt"
+            return "gt"
+        raise ValueError
+
+    comparisons = [compare_le(a, b) for a, b in pairs]
+
+    part_1 = sum(i + 1 for i, r in enumerate(comparisons) if r in ["lt", "eq"])
+
+    @dataclass
+    class Packet:
+        """A packet"""
+
+        packet: list[Any] | int
+
+        def __lt__(self, other: Any) -> bool:
+            if isinstance(other, Packet):
+                return compare_le(self.packet, other.packet) == "lt"
+            else:
+                raise NotImplementedError
+
+    packets = []
+    for a, b in pairs:
+        packets.append(Packet(a))
+        packets.append(Packet(b))
+    indices = [Packet([[2]]), Packet([[6]])]
+    packets.extend(indices)
+    packets.sort()
+    part_2 = (packets.index(indices[0]) + 1) * (packets.index(indices[1]) + 1)
+
+    return part_1, part_2
 
 
 if __name__ == "__main__":
