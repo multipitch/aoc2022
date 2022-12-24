@@ -458,13 +458,7 @@ def day_12(data: str) -> tuple[int, int]:
 def day_13(data: str) -> tuple[int, int]:
     """Day 13."""
 
-    rows = data.splitlines()
-    pairs: list[tuple[list[Any] | int, list[Any] | int]] = [
-        (literal_eval(rows[3 * i]), literal_eval(rows[3 * i + 1]))
-        for i in range(1 + len(rows) // 3)
-    ]
-
-    def compare_le(a: list[Any] | int, b: list[Any] | int) -> str:
+    def compare(a: list[Any] | int, b: list[Any] | int) -> str:
         if isinstance(a, int) and isinstance(b, int):
             if a == b:
                 return "eq"
@@ -477,10 +471,10 @@ def day_13(data: str) -> tuple[int, int]:
                     i = [i]
                 if isinstance(i, list) and isinstance(j, int):
                     j = [j]
-                    comp = compare_le(i, j)
+                    comp = compare(i, j)
                     if comp != "eq":
                         return comp
-                comp = compare_le(i, j)
+                comp = compare(i, j)
                 if comp != "eq":
                     return comp
             if len(a) == len(b):
@@ -490,10 +484,6 @@ def day_13(data: str) -> tuple[int, int]:
             return "gt"
         raise ValueError
 
-    comparisons = [compare_le(a, b) for a, b in pairs]
-
-    part_1 = sum(i + 1 for i, r in enumerate(comparisons) if r in ["lt", "eq"])
-
     @dataclass
     class Packet:
         """A packet"""
@@ -502,20 +492,80 @@ def day_13(data: str) -> tuple[int, int]:
 
         def __lt__(self, other: Any) -> bool:
             if isinstance(other, Packet):
-                return compare_le(self.packet, other.packet) == "lt"
+                return compare(self.packet, other.packet) == "lt"
             else:
                 raise NotImplementedError
 
-    packets = []
-    for a, b in pairs:
-        packets.append(Packet(a))
-        packets.append(Packet(b))
+        def __le__(self, other: Any) -> bool:
+            if isinstance(other, Packet):
+                return compare(self.packet, other.packet) in ["lt", "eq"]
+            else:
+                raise NotImplementedError
+
+    packets = [
+        Packet(literal_eval(x))
+        for i, x in enumerate(data.splitlines())
+        if i % 3 != 2
+    ]
+    pairs = [(a, packets[2 * i + 1]) for i, a in enumerate(packets[::2])]
+    part_1 = sum([(a <= b) * (i + 1) for i, (a, b) in enumerate(pairs)])
+
     indices = [Packet([[2]]), Packet([[6]])]
     packets.extend(indices)
     packets.sort()
     part_2 = (packets.index(indices[0]) + 1) * (packets.index(indices[1]) + 1)
 
     return part_1, part_2
+
+
+@register
+def day_14(data: str) -> tuple[int, int]:
+    """Day 14."""
+
+    source = [500, 0]
+    cells = defaultdict(lambda: True)
+    for shape in [
+        [[int(k) for k in j.split(",")] for j in i.split(" -> ")]
+        for i in data.splitlines()
+    ]:
+        for i, (x_2, y_2) in enumerate(shape[1:]):
+            x_1, y_1 = shape[i]
+            for x in range(min(x_1, x_2), max(x_1, x_2) + 1):
+                for y in range(min(y_1, y_2), max(y_1, y_2) + 1):
+                    cells[x, y] = False
+
+    x_min = min(coord[0] for coord in cells)
+    x_max = max(coord[0] for coord in cells)
+    y_max = max(coord[1] for coord in cells)
+    is_part_1 = True
+    part_1_result = 0
+    sand = 0
+    while [x, y] != source:
+        sand += 1
+        x, y = source
+        halt_part_1 = False
+        while True:
+            if cells[x, y + 1] and y < y_max + 1:
+                y += 1
+            elif cells[x - 1, y + 1] and y < y_max + 1:
+                x -= 1
+                y += 1
+            elif cells[x + 1, y + 1] and y < y_max + 1:
+                x += 1
+                y += 1
+            else:
+                break
+            if is_part_1 and (y > y_max or x < x_min or x > x_max):
+                halt_part_1 = True
+                break
+        cells[x, y] = False
+        if is_part_1 and halt_part_1:
+            cells[x, y] = True
+            sand -= 1
+            part_1_result = sand
+            is_part_1 = False
+
+    return part_1_result, sand
 
 
 if __name__ == "__main__":
