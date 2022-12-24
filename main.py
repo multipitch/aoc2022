@@ -568,5 +568,78 @@ def day_14(data: str) -> tuple[int, int]:
     return part_1_result, sand
 
 
+@register
+def day_15(data: str) -> tuple[int, int]:
+    """Day 15."""
+
+    row = 2000000
+    limit = 4000000
+
+    sensors: list[tuple[int, int]] = []
+    beacons: list[tuple[int, int]] = []
+
+    for sensor_x, sensor_y, beacon_x, beacon_y in (
+        [int(s) for s in re.findall(r"-?\d+", i)] for i in data.splitlines()
+    ):
+        sensors.append((sensor_x, sensor_y))
+        beacons.append((beacon_x, beacon_y))
+
+    radii = [
+        abs(beacons[i][0] - sensor[0]) + abs(beacons[i][1] - sensor[1])
+        for i, sensor in enumerate(sensors)
+    ]
+
+    # Probably a faster way of doing this that doesn't require whole
+    # ranges of integers to be stored
+    no_beacons: set[int] = set()
+    confirmed_beacons = set()
+    for i, (x, y) in enumerate(sensors):
+        radius = abs(beacons[i][0] - x) + abs(beacons[i][1] - y) - abs(row - y)
+        if radius >= 1:
+            no_beacons.update(range(x - radius, x + radius + 1))
+        if beacons[i][1] == row:
+            confirmed_beacons.add(beacons[i][0])
+
+    part_1 = len(no_beacons - confirmed_beacons)
+
+    def must_contain_beacon(point: tuple[int, int]) -> bool:
+        """Return treu if location contains an undiscovered beacon."""
+        return point not in beacons and all(
+            abs(point[0] - sensor[0]) + abs(point[1] - sensor[1]) > radii[i]
+            for i, sensor in enumerate(sensors)
+        )
+
+    def perimeter(x: int, y: int, radius: int) -> list[tuple[int, int]]:
+        """Return all perimeter points as a list."""
+        points = []
+        for r in range(radius):
+            s = radius - r
+            points.append((x + r, y + s))
+            points.append((x + s, y - r))
+            points.append((x - r, y - s))
+            points.append((x - s, y + r))
+        return points
+
+    # For part 2, location must be just outside one or more radii, so
+    # try only points that lie just outside perimeters and are within
+    # limit range.
+    def get_tuning_freq(limit: int) -> int:
+        """Find beacon location and return its tuning frequency."""
+        for i, sensor in enumerate(sensors):
+            for point in perimeter(sensor[0], sensor[1], radii[i] + 1):
+                if (
+                    0 <= point[0] <= limit
+                    and 0 <= point[1] <= limit
+                    and must_contain_beacon(point)
+                ):
+                    return 4000000 * point[0] + point[1]
+        raise KeyError("Location not found")
+
+    part_2 = get_tuning_freq(limit)
+    print(part_2)
+    return part_1, part_2
+
+
 if __name__ == "__main__":
-    run_all()
+    # run_all()
+    run_problem(day_15)
