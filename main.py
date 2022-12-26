@@ -644,6 +644,92 @@ def day_15(data: str) -> tuple[int, int]:
 
 
 @register
+def day_16(data: str) -> tuple[int, int]:
+    """Day 16."""
+
+    # data = (
+    #     "Valve AA has flow rate=0; tunnels lead to valves DD, II, BB\n"
+    #     "Valve BB has flow rate=13; tunnels lead to valves CC, AA\n"
+    #     "Valve CC has flow rate=2; tunnels lead to valves DD, BB\n"
+    #     "Valve DD has flow rate=20; tunnels lead to valves CC, AA, EE\n"
+    #     "Valve EE has flow rate=3; tunnels lead to valves FF, DD\n"
+    #     "Valve FF has flow rate=0; tunnels lead to valves EE, GG\n"
+    #     "Valve GG has flow rate=0; tunnels lead to valves FF, HH\n"
+    #     "Valve HH has flow rate=22; tunnel leads to valve GG\n"
+    #     "Valve II has flow rate=0; tunnels lead to valves AA, JJ\n"
+    #     "Valve JJ has flow rate=21; tunnel leads to valve II\n"
+    # )
+
+    nodes = set()
+    rates = {}
+    edges = {}
+    for line in data.splitlines():
+        match line.split():
+            case _, source, _, _, rate, _, _, _, _, *dests:
+                nodes.add(source)
+                if (rate_ := int(rate[5:-1])) > 0:
+                    rates[source] = rate_
+                edges[source] = set(dest.strip(",") for dest in dests)
+            case _:
+                raise ValueError
+
+    # Note: Very small no of valves with flow; assume all need to be used
+    # Find shortest paths between each pair of valves
+    # Figure out ordering that gives best result? 8.7e9 options
+    return 0, 0
+
+
+@register
+def day_18(data: str) -> tuple[int, int]:
+    """Day 18."""
+
+    data = (
+        "2,2,2\n1,2,2\n3,2,2\n2,1,2\n2,3,2\n2,2,1\n2,2,3\n2,2,4\n2,2,6\n"
+        "1,2,5\n3,2,5\n2,1,5\n2,3,5\n"
+    )
+
+    cubes = set(tuple(int(i) for i in j.split(",")) for j in data.splitlines())
+    adj = [(0, 0, 1), (0, 1, 0), (1, 0, 0), (-1, 0, 0), (0, -1, 0), (0, 0, -1)]
+
+    all_surf = sum(
+        1
+        for x, y, z in cubes
+        for i, j, k in adj
+        if (x + i, y + j, z + k) not in cubes
+    )
+
+    def shadowed(x: int, y: int, z: int, i: int, j: int, k: int) -> bool:
+        """Check if there are any other cubes between face and exterior."""
+        # Too conservative
+        if i == 1 and j == 0 and k == 0:
+            return any(u > x and v == y and w == z for u, v, w in cubes)
+        elif i == -1 and j == 0 and k == 0:
+            return any(u < x and v == y and w == z for u, v, w in cubes)
+        elif i == 0 and j == 1 and k == 0:
+            return any(u == x and v > y and w == z for u, v, w in cubes)
+        elif i == 0 and j == -1 and k == 0:
+            return any(u == x and v < y and w == z for u, v, w in cubes)
+        elif i == 0 and j == 0 and k == 1:
+            return any(u == x and v == y and w > z for u, v, w in cubes)
+        elif i == 0 and j == 0 and k == -1:
+            return any(u == x and v == y and w < z for u, v, w in cubes)
+        else:
+            raise ValueError
+
+    # TODO: Identify all potential interior / shadowed cubes???
+    # TODO: BFS in each direction to find if each shadowed cube can
+    #       access exterior free space
+
+    ext_surf = sum(
+        1
+        for x, y, z in cubes
+        for i, j, k in adj
+        if (x + i, y + j, z + k) not in cubes
+        and not shadowed(x, y, z, i, j, k)
+    )
+    return all_surf, ext_surf
+
+
 def day_25(data: str) -> str:
     """Day 25."""
 
@@ -666,5 +752,5 @@ def day_25(data: str) -> str:
 
 
 if __name__ == "__main__":
-    run_all()
-    # run_problem(day_25)
+    # run_all()
+    run_problem(day_18)
