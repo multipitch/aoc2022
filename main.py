@@ -31,14 +31,17 @@ def register(func: Callable[..., Any]) -> Callable[..., Any]:
     return func
 
 
-def run_problem(func: Callable[[str], tuple[Any, Any]]) -> None:
+def run_problem(func: Callable[[str], Any]) -> None:
     """Run a problem on a downloaded dataset."""
     day = str(func.__doc__)[4:6]
     with open(Path("inputs") / f"{day}.txt", encoding="utf-8") as file_obj:
         raw_string = file_obj.read()
-    part_1, part_2 = func(raw_string)
-    print(f"Day {day}: Part 1 = {part_1}")
-    print(f"        Part 2 = {part_2}")
+    ret = func(raw_string)
+    if isinstance(ret, tuple):
+        print(f"Day {day}: Part 1 = {ret[0]}")
+        print(f"        Part 2 = {ret[1]}")
+    elif isinstance(ret, str) or isinstance(ret, int):
+        print(f"Day {day}: Part 1 = {ret}")
 
 
 def run_all() -> None:
@@ -636,10 +639,32 @@ def day_15(data: str) -> tuple[int, int]:
         raise KeyError("Location not found")
 
     part_2 = get_tuning_freq(limit)
-    print(part_2)
+
     return part_1, part_2
 
 
+@register
+def day_25(data: str) -> str:
+    """Day 25."""
+
+    def s2d(snafu: str) -> int:
+        """Convert SNAFU to decimal."""
+        trans = {"=": -2, "-": -1, "0": 0, "1": 1, "2": 2}
+        return sum(5**i * trans[d] for i, d in enumerate(snafu[::-1]))
+
+    def d2s(dec: int) -> str:
+        """Convert decimal to SNAFU."""
+        trans = {0: "0", 1: "1", 2: "2", 3: "=", 4: "-"}
+        s = []
+        while dec:
+            mod5 = dec % 5
+            dec = dec // 5 + 1 if mod5 > 2 else dec // 5
+            s.append(trans[mod5])
+        return "".join(s)[::-1]
+
+    return d2s(sum(s2d(s) for s in data.splitlines()))
+
+
 if __name__ == "__main__":
-    # run_all()
-    run_problem(day_15)
+    run_all()
+    # run_problem(day_25)
