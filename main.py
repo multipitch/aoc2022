@@ -680,13 +680,127 @@ def day_16(data: str) -> tuple[int, int]:
 
 
 @register
+def day_17(data: str) -> tuple[int, int]:
+    """Day 17."""
+    jets = data.strip()
+    width = 7
+    start_dy = 4
+    shapes = [
+        [[2, 0], [3, 0], [4, 0], [5, 0]],
+        [[2, 1], [3, 0], [3, 1], [3, 2], [4, 1]],
+        [[2, 0], [3, 0], [4, 0], [4, 1], [4, 2]],
+        [[2, 0], [2, 1], [2, 2], [2, 3]],
+        [[2, 0], [2, 1], [3, 0], [3, 1]],
+    ]
+
+    def move_left(
+        rock: list[list[int]], static: set[tuple[int, int]]
+    ) -> list[list[int]]:
+        """Move rock one place to the left, if possible."""
+        if all(x > 0 and (x - 1, y) not in static for (x, y) in rock):
+            return [[x - 1, y] for x, y in rock]
+        return rock
+
+    def move_right(
+        rock: list[list[int]], static: set[tuple[int, int]]
+    ) -> list[list[int]]:
+        """Move rock one place to the right, if possible."""
+        if all(x < width - 1 and (x + 1, y) not in static for (x, y) in rock):
+            return [[x + 1, y] for x, y in rock]
+        return rock
+
+    def move_down(
+        rock: list[list[int]], static: set[tuple[int, int]]
+    ) -> list[list[int]]:
+        """Move rock one place down, if possible."""
+        if all((x, y - 1) not in static for (x, y) in rock):
+            return [[x, y - 1] for x, y in rock]
+        raise ValueError
+
+    n_shapes = len(shapes)
+    n_jets = len(jets)
+    move = {"<": move_left, ">": move_right}
+
+    def solve(n_rocks: int) -> int:
+        """Solve for height."""
+
+        static = set((i, 0) for i in range(width))
+        tops = [0] * width
+        base_height = 0
+        frame_height = 0
+        rocks_released = 0
+        jet_index = 0
+        height_deltas = [0]
+        last_height = 0
+
+        big_problem = n_rocks > n_shapes * n_jets
+
+        n_rocks_ = n_shapes * n_jets if big_problem else n_rocks
+
+        while rocks_released < n_rocks_:
+
+            # Can trim search space if tops make convex shape.
+            max_tops = max(tops)
+            if max_tops - min(tops) <= 1:
+                base_height += max_tops
+                tops = [i - max_tops for i in tops]
+                frame_height = 0
+                static = set(enumerate(tops))
+
+            rock = [
+                [x, y + frame_height + start_dy]
+                for x, y in shapes[rocks_released % n_shapes]
+            ]
+            rocks_released += 1
+
+            while True:
+                rock = move[jets[jet_index]](rock, static)
+                jet_index = (jet_index + 1) % n_jets
+                try:
+                    rock = move_down(rock, static)
+                except ValueError:
+                    for (x, y) in rock:
+                        static.add((x, y))
+                        tops[x] = max(tops[x], y)
+                        frame_height = max(tops)
+                    break
+
+            height = base_height + frame_height
+            height_deltas.append(height - last_height)
+            last_height = height
+
+        if not big_problem:
+            return height
+
+        search_size = len(height_deltas) // 2
+        for repeat_length in reversed(range(0, search_size, n_shapes)):
+            if (
+                height_deltas[-2 * repeat_length : -repeat_length]
+                == height_deltas[-repeat_length:]
+            ):
+                break
+        else:
+            raise KeyError("Repeating unit not found; try a longer run.")
+
+        repeat_height = sum(height_deltas[-repeat_length:])
+
+        initial = height
+        repeating = ((n_rocks - n_rocks_) // repeat_length) * repeat_height
+        end = sum(
+            height_deltas[
+                -repeat_length : -repeat_length
+                + (n_rocks - n_rocks_) % repeat_length :
+            ]
+        )
+
+        return initial + repeating + end
+
+    return solve(2022), solve(1000000000000)
+
+
+@register
 def day_18(data: str) -> tuple[int, int]:
     """Day 18."""
-
-    data = (
-        "2,2,2\n1,2,2\n3,2,2\n2,1,2\n2,3,2\n2,2,1\n2,2,3\n2,2,4\n2,2,6\n"
-        "1,2,5\n3,2,5\n2,1,5\n2,3,5\n"
-    )
 
     cubes = set(tuple(int(i) for i in j.split(",")) for j in data.splitlines())
     adj = [(0, 0, 1), (0, 1, 0), (1, 0, 0), (-1, 0, 0), (0, -1, 0), (0, 0, -1)]
@@ -727,9 +841,41 @@ def day_18(data: str) -> tuple[int, int]:
         if (x + i, y + j, z + k) not in cubes
         and not shadowed(x, y, z, i, j, k)
     )
-    return all_surf, ext_surf
+    return all_surf, ext_surf  # TODO: Part 2 not correct.
 
 
+def day_20(data: str) -> tuple[int, int]:
+    """Day 20."""
+
+    # data = "1\n2\n-3\n3\n-2\n0\n4\n"
+
+    @dataclass
+    class Point:
+        """A point."""
+
+        value: int
+
+    points = [Point(int(i)) for i in data.splitlines()]
+    size = len(points)
+    zero = next(point for point in points if point.value == 0)
+    spool = deque(points)
+
+    for point in points:
+        spool.rotate(-spool.index(point))
+        spool.popleft()
+        spool.rotate(-(point.value % (size - 1)))
+        spool.append(point)
+
+    spool.rotate(-spool.index(zero))
+    part_1 = 0
+    for _ in range(3):
+        spool.rotate(-1000)
+        part_1 += spool[0].value
+
+    return part_1, 0
+
+
+@register
 def day_25(data: str) -> str:
     """Day 25."""
 
@@ -752,5 +898,6 @@ def day_25(data: str) -> str:
 
 
 if __name__ == "__main__":
-    # run_all()
-    run_problem(day_18)
+    pass
+    run_all()
+    # run_problem(day_17)
