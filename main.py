@@ -802,46 +802,67 @@ def day_17(data: str) -> tuple[int, int]:
 def day_18(data: str) -> tuple[int, int]:
     """Day 18."""
 
-    cubes = set(tuple(int(i) for i in j.split(",")) for j in data.splitlines())
-    adj = [(0, 0, 1), (0, 1, 0), (1, 0, 0), (-1, 0, 0), (0, -1, 0), (0, 0, -1)]
+    # Part 2: 2836 is too high
 
-    all_surf = sum(
-        1
-        for x, y, z in cubes
-        for i, j, k in adj
-        if (x + i, y + j, z + k) not in cubes
+    cubes: set[tuple[int, int, int]] = set(
+        tuple(int(i) for i in j.split(",")) for j in data.splitlines()
     )
 
-    def shadowed(x: int, y: int, z: int, i: int, j: int, k: int) -> bool:
-        """Check if there are any other cubes between face and exterior."""
-        # Too conservative
-        if i == 1 and j == 0 and k == 0:
-            return any(u > x and v == y and w == z for u, v, w in cubes)
-        elif i == -1 and j == 0 and k == 0:
-            return any(u < x and v == y and w == z for u, v, w in cubes)
-        elif i == 0 and j == 1 and k == 0:
-            return any(u == x and v > y and w == z for u, v, w in cubes)
-        elif i == 0 and j == -1 and k == 0:
-            return any(u == x and v < y and w == z for u, v, w in cubes)
-        elif i == 0 and j == 0 and k == 1:
-            return any(u == x and v == y and w > z for u, v, w in cubes)
-        elif i == 0 and j == 0 and k == -1:
-            return any(u == x and v == y and w < z for u, v, w in cubes)
-        else:
-            raise ValueError
+    moves = [
+        (0, 0, 1),
+        (0, 1, 0),
+        (1, 0, 0),
+        (-1, 0, 0),
+        (0, -1, 0),
+        (0, 0, -1),
+    ]
 
-    # TODO: Identify all potential interior / shadowed cubes???
-    # TODO: BFS in each direction to find if each shadowed cube can
-    #       access exterior free space
+    def surface_area(cubes: set[tuple[int, int, int]]) -> int:
+        """Total internal and external surface area."""
+        all_surf = sum(
+            1
+            for x, y, z in cubes
+            for i, j, k in moves
+            if (x + i, y + j, z + k) not in cubes
+        )
+        return all_surf
 
-    ext_surf = sum(
-        1
-        for x, y, z in cubes
-        for i, j, k in adj
-        if (x + i, y + j, z + k) not in cubes
-        and not shadowed(x, y, z, i, j, k)
+    [(x_min, x_max), (y_min, y_max), (z_min, z_max)] = [
+        (min(i) - 1, max(i) + 2) for i in list(zip(*cubes))
+    ]
+
+    # bfs
+    seen: set[tuple[int, int, int]] = {(x_min, y_min, z_min)}
+    queue: deque[tuple[int, int, int]] = deque()
+    queue.append((x_min, y_min, z_min))
+    while queue:
+        here = queue.popleft()
+        for move in moves:
+            adjacent = (
+                here[0] + move[0],
+                here[1] + move[1],
+                here[2] + move[2],
+            )
+            print(adjacent)
+            if (
+                adjacent not in seen
+                and adjacent not in cubes
+                and x_min <= adjacent[0] <= x_max
+                and y_min <= adjacent[1] <= y_max
+                and z_min <= adjacent[2] <= z_max
+            ):
+                seen.add(adjacent)
+                queue.append(adjacent)
+
+    mould_area = surface_area(seen)
+    width = x_max - x_min + 1
+    height = y_max - y_min + 1
+    depth = z_max - z_min + 1
+    shape_outer_area = mould_area - 2 * (
+        width * height + width * depth + height * depth
     )
-    return all_surf, ext_surf  # TODO: Part 2 not correct.
+
+    return surface_area(cubes), shape_outer_area
 
 
 def day_20(data: str) -> tuple[int, int]:
@@ -899,5 +920,5 @@ def day_25(data: str) -> str:
 
 if __name__ == "__main__":
     pass
-    run_all()
-    # run_problem(day_17)
+    # run_all()
+    run_problem(day_18)
